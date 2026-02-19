@@ -14,8 +14,6 @@ public class RecurringReservationController(AppDbContext _context) : ControllerB
     public async Task<ActionResult<IReadOnlyList<RecurringReservationDTO>>> GetRecurringReservations()
     {
         var recurringReservations = await _context.RecurringReservations
-            .Include(rr => rr.Room)
-            .Include(rr => rr.User)
             .Select(rr => new RecurringReservationResponseDTO
             {
                 Id = rr.Id,
@@ -33,8 +31,6 @@ public class RecurringReservationController(AppDbContext _context) : ControllerB
     public async Task<ActionResult<RecurringReservationDTO>> GetRecurringReservation(Guid id)
     {
         var recurringReservation = await _context.RecurringReservations
-            .Include(rr => rr.Room)
-            .Include(rr => rr.User)
             .Select(rr => new RecurringReservationResponseDTO
             {
                 Id = rr.Id,
@@ -70,8 +66,6 @@ public class RecurringReservationController(AppDbContext _context) : ControllerB
         await _context.SaveChangesAsync();
 
         var createdRecurringReservation = await _context.RecurringReservations
-            .Include(rr => rr.Room)
-            .Include(rr => rr.User)
             .Where(rr => rr.Id == newRecurringReservation.Id)
             .Select(rr => new RecurringReservationResponseDTO
             {
@@ -106,8 +100,6 @@ public class RecurringReservationController(AppDbContext _context) : ControllerB
             return BadRequest("ID mismatch.");
 
         var recurringReservation = await _context.RecurringReservations
-            .Include(rr => rr.Room)
-            .Include(rr => rr.User)
             .FirstOrDefaultAsync(rr => rr.Id == id);
 
         if (recurringReservation == null)

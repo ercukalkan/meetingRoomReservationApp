@@ -14,7 +14,6 @@ public class RoomController(AppDbContext _context) : ControllerBase
     public async Task<ActionResult<IReadOnlyList<Room>>> GetRooms()
     {
         var rooms = await _context.Rooms
-            .Include(r => r.Equipments)
              .Select(r => new RoomDTO
              {
                  Id = r.Id,
@@ -31,8 +30,7 @@ public class RoomController(AppDbContext _context) : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<Room>> GetRoom(Guid id)
     {
-        var room = await _context.Rooms.
-            Include(r => r.Equipments)
+        var room = await _context.Rooms
             .Where(r => r.Id == id)
             .Select(r => new RoomDTO
             {
@@ -72,7 +70,6 @@ public class RoomController(AppDbContext _context) : ControllerBase
         await _context.SaveChangesAsync();
 
         var createdRoom = await _context.Rooms
-            .Include(r => r.Equipments)
             .Where(r => r.Id == newRoom.Id)
             .Select(r => new RoomDTO
             {

@@ -14,8 +14,6 @@ public class ReservationController(AppDbContext _context) : ControllerBase
     public async Task<ActionResult<IReadOnlyList<Reservation>>> GetReservations()
     {
         var reservations = await _context.Reservations
-            .Include(r => r.Room)
-            .Include(r => r.User)
             .Select(r => new ReservationResponseDTO
             {
                 Id = r.Id,
@@ -33,8 +31,6 @@ public class ReservationController(AppDbContext _context) : ControllerBase
     public async Task<ActionResult<Reservation>> GetReservation(Guid id)
     {
         var reservation = await _context.Reservations
-            .Include(r => r.Room)
-            .Include(r => r.User)
             .Select(r => new ReservationResponseDTO
             {
                 Id = r.Id,
@@ -70,8 +66,6 @@ public class ReservationController(AppDbContext _context) : ControllerBase
         await _context.SaveChangesAsync();
 
         var createdReservation = await _context.Reservations
-            .Include(r => r.Room)
-            .Include(r => r.User)
             .Where(r => r.Id == newReservation.Id)
             .Select(r => new ReservationResponseDTO
             {
@@ -102,8 +96,6 @@ public class ReservationController(AppDbContext _context) : ControllerBase
             return BadRequest("ID mismatch.");
 
         var reservation = await _context.Reservations
-            .Include(r => r.Room)
-            .Include(r => r.User)
             .FirstOrDefaultAsync(r => r.Id == id);
 
         if (reservation == null)
