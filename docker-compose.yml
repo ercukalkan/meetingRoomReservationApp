@@ -1,0 +1,20 @@
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: db-mssql
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      ACCEPT_EULA: ${ACCEPT_EULA}
+    ports:
+      - "1433:1433"
+    networks:
+      - db-network
+    volumes:
+      - db-data:/var/lib/mssql/data
+
+networks:
+  db-network:
+    driver: bridge
+
+volumes:
+  db-data:
