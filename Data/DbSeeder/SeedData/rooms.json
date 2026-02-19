@@ -1,0 +1,102 @@
+[
+    {
+        "Name": "Conference Room A",
+        "Capacity": 8,
+        "Floor": 1
+    },
+    {
+        "Name": "Meeting Room 101",
+        "Capacity": 4,
+        "Floor": 1
+    },
+    {
+        "Name": "Board Room",
+        "Capacity": 10,
+        "Floor": 2
+    },
+    {
+        "Name": "Executive Suite",
+        "Capacity": 6,
+        "Floor": 2
+    },
+    {
+        "Name": "Training Room 301",
+        "Capacity": 9,
+        "Floor": 3
+    },
+    {
+        "Name": "Workshop Space",
+        "Capacity": 7,
+        "Floor": 3
+    },
+    {
+        "Name": "Collaboration Hub",
+        "Capacity": 5,
+        "Floor": 1
+    },
+    {
+        "Name": "Small Focus Room",
+        "Capacity": 3,
+        "Floor": 4
+    },
+    {
+        "Name": "Innovation Lab",
+        "Capacity": 8,
+        "Floor": 4
+    },
+    {
+        "Name": "Client Meeting Room",
+        "Capacity": 6,
+        "Floor": 2
+    },
+    {
+        "Name": "Team Huddle",
+        "Capacity": 4,
+        "Floor": 5
+    },
+    {
+        "Name": "Presentation Theater",
+        "Capacity": 10,
+        "Floor": 5
+    },
+    {
+        "Name": "Quiet Meeting Space",
+        "Capacity": 3,
+        "Floor": 1
+    },
+    {
+        "Name": "Strategy Room",
+        "Capacity": 7,
+        "Floor": 3
+    },
+    {
+        "Name": "Development Area",
+        "Capacity": 9,
+        "Floor": 4
+    },
+    {
+        "Name": "Executive Briefing",
+        "Capacity": 5,
+        "Floor": 2
+    },
+    {
+        "Name": "Open Workspace",
+        "Capacity": 10,
+        "Floor": 1
+    },
+    {
+        "Name": "Private Call Room",
+        "Capacity": 3,
+        "Floor": 5
+    },
+    {
+        "Name": "Team Collaboration",
+        "Capacity": 8,
+        "Floor": 3
+    },
+    {
+        "Name": "Project War Room",
+        "Capacity": 6,
+        "Floor": 4
+    }
+]
