@@ -55,7 +55,7 @@ public class ReservationController(AppDbContext _context) : ControllerBase
     public async Task<ActionResult<Reservation>> CreateReservation(ReservationDTO dto)
     {
         if (dto == null)
-            return BadRequest("Room data is required.");
+            return BadRequest("Reservation data is required.");
 
         var newReservation = new Reservation
         {
