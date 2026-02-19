@@ -43,6 +43,12 @@ public class DbSeeder
                     }
                     break;
                 case "reservations":
+                    if (!context.Reservations.Any())
+                    {
+                        var reservations = JsonSerializer.Deserialize<List<Reservation>>(jsonData);
+                        if (reservations == null) return;
+                        context.Reservations.AddRange(reservations);
+                    }
                     break;
                 case "recurringReservations":
                     break;
