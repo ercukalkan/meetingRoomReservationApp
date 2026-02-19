@@ -3,6 +3,7 @@ using Data.Context;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Data.DTOs;
+using Data.Filtering;
 
 namespace API.Controllers;
 
@@ -11,9 +12,28 @@ namespace API.Controllers;
 public class ReservationController(AppDbContext _context) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<Reservation>>> GetReservations()
+    public async Task<ActionResult<IReadOnlyList<ReservationResponseDTO>>> GetReservations([FromQuery] FilterParams filterParams)
     {
-        var reservations = await _context.Reservations
+        var errors = new List<string>();
+
+        if (filterParams.Start.HasValue && filterParams.End.HasValue && filterParams.Start >= filterParams.End)
+        {
+            errors.Add("Start must be earlier than End.");
+            return BadRequest("Start must be earlier than End.");
+        }
+
+        var query = _context.Reservations.AsNoTracking();
+
+        if (filterParams.RoomId.HasValue)
+            query = query.Where(r => r.RoomId == filterParams.RoomId.Value);
+
+        if (filterParams.UserId.HasValue)
+            query = query.Where(r => r.UserId == filterParams.UserId.Value);
+
+        if (filterParams.Start.HasValue && filterParams.End.HasValue)
+            query = query.Where(r => r.Start < filterParams.End.Value && r.End > filterParams.Start.Value);
+
+        var reservations = await query
             .Select(r => new ReservationResponseDTO
             {
                 Id = r.Id,
@@ -28,7 +48,7 @@ public class ReservationController(AppDbContext _context) : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<Reservation>> GetReservation(Guid id)
+    public async Task<ActionResult<ReservationResponseDTO>> GetReservation(Guid id)
     {
         var reservation = await _context.Reservations
             .Select(r => new ReservationResponseDTO
@@ -48,7 +68,7 @@ public class ReservationController(AppDbContext _context) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<Reservation>> CreateReservation(ReservationDTO dto)
+    public async Task<ActionResult<ReservationResponseDTO>> CreateReservation(ReservationDTO dto)
     {
         if (dto == null)
             return BadRequest("Reservation data is required.");
