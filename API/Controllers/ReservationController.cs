@@ -6,6 +6,7 @@ using Data.DTOs;
 using Data.Filtering;
 using Data.Response;
 using Core.Exceptions;
+using Core.Helper;
 
 namespace API.Controllers;
 
@@ -88,29 +89,7 @@ public class ReservationController(AppDbContext _context) : ControllerBase
             RecurringReservationId = dto.RecurringReservationId
         };
 
-        // Check for overlapping reservations for the same room
-        if (OverlappingReservationsInRoom(_context, newReservation))
-            throw new BadRequestException("The reservation overlaps with an existing reservation for the same room.");
-
-        // Check for maximum duration
-        if (ReservationExceedsMaxDuration(newReservation))
-            throw new BadRequestException("The reservation exceeds the maximum allowed duration of 2 hours.");
-
-        // Check if reservation is too early
-        if (TooEarlyToMakeReservation(newReservation))
-            throw new BadRequestException("Cannot create a reservation that starts in more than a week from now.");
-
-        // Check if reservation is past
-        if (IsReservationPast(newReservation))
-            throw new BadRequestException("Cannot create a reservation from the past.");
-
-        // Check if maximum reservations per user exceeded
-        if (MaximumReservationsPerUserExceeded(_context, newReservation))
-            throw new BadRequestException("User cannot have more than 3 active reservations on the same day.");
-
-        // Check if user already has a reservation that overlaps with the new reservation
-        if (UserAlreadyHasReservation(_context, newReservation))
-            throw new BadRequestException("User already has a reservation that overlaps with the new reservation.");
+        ReservationHelper.ValidationCheck(_context, newReservation);
 
         _context.Reservations.Add(newReservation);
         await _context.SaveChangesAsync();
@@ -159,29 +138,7 @@ public class ReservationController(AppDbContext _context) : ControllerBase
         reservation.RoomId = dto.RoomId;
         reservation.UserId = dto.UserId;
 
-        // Check for overlapping reservations for the same room
-        if (OverlappingReservationsInRoom(_context, reservation))
-            throw new BadRequestException("The reservation overlaps with an existing reservation for the same room.");
-
-        // Check for maximum duration
-        if (ReservationExceedsMaxDuration(reservation))
-            throw new BadRequestException("The reservation exceeds the maximum allowed duration of 2 hours.");
-
-        // Check if reservation is too early
-        if (TooEarlyToMakeReservation(reservation))
-            throw new BadRequestException("Cannot update a reservation that starts in more than a week from now.");
-
-        // Check if reservation is past
-        if (IsReservationPast(reservation))
-            throw new BadRequestException("Cannot update a reservation that has already started.");
-
-        // Check if maximum reservations per user exceeded
-        if (MaximumReservationsPerUserExceeded(_context, reservation))
-            throw new BadRequestException("User cannot have more than 3 active reservations on the same day.");
-
-        // Check if user already has a reservation that overlaps with the updated reservation
-        if (UserAlreadyHasReservation(_context, reservation))
-            throw new BadRequestException("User already has a reservation that overlaps with the updated reservation.");
+        ReservationHelper.ValidationCheck(_context, reservation);
 
         await _context.SaveChangesAsync();
         return NoContent();
@@ -193,63 +150,12 @@ public class ReservationController(AppDbContext _context) : ControllerBase
         var reservation = await _context.Reservations.FindAsync(id)
             ?? throw new NotFoundException($"Reservation with ID {id} not found.");
 
-        if (TooLateToCancel(reservation))
+        if (ReservationHelper.TooLateToCancel(reservation))
             throw new BadRequestException("Cannot cancel a reservation less than 30 minutes before it starts.");
 
         _context.Reservations.Remove(reservation);
         await _context.SaveChangesAsync();
 
         return NoContent();
-    }
-
-    private static bool OverlappingReservationsInRoom(AppDbContext context, Reservation reservation)
-    {
-        return context.Reservations.Any(r =>
-            r.RoomId == reservation.RoomId &&
-            r.Id != reservation.Id &&
-            r.Start < reservation.End &&
-            r.End > reservation.Start);
-    }
-
-    private static bool ReservationExceedsMaxDuration(Reservation reservation)
-    {
-        return reservation.End - reservation.Start > TimeSpan.FromHours(2);
-    }
-
-    private static bool TooEarlyToMakeReservation(Reservation reservation)
-    {
-        return reservation.Start > DateTime.UtcNow.AddDays(7);
-    }
-
-    private static bool IsReservationPast(Reservation reservation)
-    {
-        return reservation.Start < DateTime.UtcNow;
-    }
-
-    private static bool TooLateToCancel(Reservation reservation)
-    {
-        return reservation.Start < DateTime.UtcNow.AddMinutes(30);
-    }
-
-    private static bool MaximumReservationsPerUserExceeded(AppDbContext context, Reservation reservation)
-    {
-        var userReservationsCount = context.Reservations.Count(r =>
-            r.UserId == reservation.UserId &&
-            r.Start.Date == reservation.Start.Date &&
-            r.Id != reservation.Id);
-
-        return userReservationsCount >= 3;
-    }
-
-    private static bool UserAlreadyHasReservation(AppDbContext context, Reservation reservation)
-    {
-        var boolean = context.Reservations.Any(r =>
-            r.UserId == reservation.UserId &&
-            r.Start.Date == reservation.Start.Date &&
-            r.Start.Hour <= reservation.End.Hour &&
-            r.End.Hour >= reservation.Start.Hour &&
-            r.Id != reservation.Id);
-
-        return boolean;
     }
 }
