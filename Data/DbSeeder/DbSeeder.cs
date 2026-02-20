@@ -1,7 +1,8 @@
 using Data.Entities;
+using Data.Context;
 using System.Text.Json;
 
-namespace Data.Context.DbSeeder;
+namespace Data.DbSeeder;
 
 public class DbSeeder
 {

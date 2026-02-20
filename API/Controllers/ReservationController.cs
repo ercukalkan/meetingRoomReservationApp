@@ -82,6 +82,10 @@ public class ReservationController(AppDbContext _context) : ControllerBase
             RecurringReservationId = dto.RecurringReservationId
         };
 
+        // Check for overlapping reservations for the same room
+        if (OverlappingReservationsExist(newReservation))
+            return BadRequest("The reservation overlaps with an existing reservation for the same room.");
+
         _context.Reservations.Add(newReservation);
         await _context.SaveChangesAsync();
 
@@ -126,6 +130,10 @@ public class ReservationController(AppDbContext _context) : ControllerBase
         reservation.RoomId = dto.RoomId;
         reservation.UserId = dto.UserId;
 
+        // Check for overlapping reservations for the same room
+        if (OverlappingReservationsExist(reservation))
+            return BadRequest("The reservation overlaps with an existing reservation for the same room.");
+
         await _context.SaveChangesAsync();
         return NoContent();
     }
@@ -142,5 +150,14 @@ public class ReservationController(AppDbContext _context) : ControllerBase
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    private bool OverlappingReservationsExist(Reservation reservation)
+    {
+        return _context.Reservations.Any(r =>
+            r.RoomId == reservation.RoomId &&
+            r.Id != reservation.Id &&
+            r.Start < reservation.End &&
+            r.End > reservation.Start);
     }
 }
