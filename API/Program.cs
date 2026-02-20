@@ -1,6 +1,7 @@
 using Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Data.DbSeeder;
+using API.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +34,8 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = string.Empty;
     });
 }
+
+app.UseExceptionHandlerMiddleware();
 
 app.UseHttpsRedirection();
 
