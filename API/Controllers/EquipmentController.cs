@@ -14,12 +14,12 @@ namespace API.Controllers;
 public class EquipmentController(AppDbContext _context) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<ResponseSchema<List<EquipmentDTO>>>> GetEquipments()
+    public async Task<ActionResult<ResponseSchema<IReadOnlyList<EquipmentDTO>>>> GetEquipments()
     {
         var equipments = await _context.Equipments
             .Select(e => new EquipmentDTO { Id = e.Id, Name = e.Name })
             .ToListAsync();
-        return Ok(new ResponseSchema<List<EquipmentDTO>>
+        return Ok(new ResponseSchema<IReadOnlyList<EquipmentDTO>>
         {
             Message = "Equipments retrieved successfully.",
             Success = true,

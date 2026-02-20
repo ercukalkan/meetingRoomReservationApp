@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Data.DTOs;
 using Data.Filtering;
+using Data.Response;
+using Core.Exceptions;
 
 namespace API.Controllers;
 
@@ -12,15 +14,10 @@ namespace API.Controllers;
 public class ReservationController(AppDbContext _context) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<ReservationResponseDTO>>> GetReservations([FromQuery] FilterParams filterParams)
+    public async Task<ActionResult<ResponseSchema<IReadOnlyList<ReservationResponseDTO>>>> GetReservations([FromQuery] FilterParams filterParams)
     {
-        var errors = new List<string>();
-
         if (filterParams.Start.HasValue && filterParams.End.HasValue && filterParams.Start >= filterParams.End)
-        {
-            errors.Add("Start must be earlier than End.");
-            return BadRequest("Start must be earlier than End.");
-        }
+            throw new BadRequestException("Start must be earlier than End.");
 
         var query = _context.Reservations.AsNoTracking();
 
@@ -44,11 +41,16 @@ public class ReservationController(AppDbContext _context) : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(reservations);
+        return Ok(new ResponseSchema<IReadOnlyList<ReservationResponseDTO>>
+        {
+            Message = "Reservations retrieved successfully.",
+            Success = true,
+            Data = reservations
+        });
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<ReservationResponseDTO>> GetReservation(Guid id)
+    public async Task<ActionResult<ResponseSchema<ReservationResponseDTO>>> GetReservation(Guid id)
     {
         var reservation = await _context.Reservations
             .Select(r => new ReservationResponseDTO
@@ -59,19 +61,23 @@ public class ReservationController(AppDbContext _context) : ControllerBase
                 Room = new() { Id = r.RoomId, Name = r.Room.Name },
                 User = new() { Id = r.UserId, Name = r.User.Name }
             })
-            .FirstOrDefaultAsync(r => r.Id == id);
+            .FirstOrDefaultAsync(r => r.Id == id)
+            ??
+            throw new NotFoundException($"Reservation with ID {id} not found.");
 
-        if (reservation == null)
-            return NotFound("Reservation not found.");
-
-        return Ok(reservation);
+        return Ok(new ResponseSchema<ReservationResponseDTO>
+        {
+            Message = "Reservation retrieved successfully.",
+            Success = true,
+            Data = reservation
+        });
     }
 
     [HttpPost]
-    public async Task<ActionResult<ReservationResponseDTO>> CreateReservation(ReservationDTO dto)
+    public async Task<ActionResult<ResponseSchema<ReservationResponseDTO>>> CreateReservation(ReservationDTO dto)
     {
         if (dto == null)
-            return BadRequest("Reservation data is required.");
+            throw new BadRequestException("Reservation data is required.");
 
         var newReservation = new Reservation
         {
@@ -84,27 +90,27 @@ public class ReservationController(AppDbContext _context) : ControllerBase
 
         // Check for overlapping reservations for the same room
         if (OverlappingReservationsInRoom(_context, newReservation))
-            return BadRequest("The reservation overlaps with an existing reservation for the same room.");
+            throw new BadRequestException("The reservation overlaps with an existing reservation for the same room.");
 
         // Check for maximum duration
         if (ReservationExceedsMaxDuration(newReservation))
-            return BadRequest("The reservation exceeds the maximum allowed duration of 2 hours.");
+            throw new BadRequestException("The reservation exceeds the maximum allowed duration of 2 hours.");
 
         // Check if reservation is too early
         if (TooEarlyToMakeReservation(newReservation))
-            return BadRequest("Cannot create a reservation that starts in more than a week from now.");
+            throw new BadRequestException("Cannot create a reservation that starts in more than a week from now.");
 
         // Check if reservation is past
         if (IsReservationPast(newReservation))
-            return BadRequest("Cannot create a reservation from the past.");
+            throw new BadRequestException("Cannot create a reservation from the past.");
 
         // Check if maximum reservations per user exceeded
         if (MaximumReservationsPerUserExceeded(_context, newReservation))
-            return BadRequest("User cannot have more than 3 active reservations on the same day.");
+            throw new BadRequestException("User cannot have more than 3 active reservations on the same day.");
 
         // Check if user already has a reservation that overlaps with the new reservation
         if (UserAlreadyHasReservation(_context, newReservation))
-            return BadRequest("User already has a reservation that overlaps with the new reservation.");
+            throw new BadRequestException("User already has a reservation that overlaps with the new reservation.");
 
         _context.Reservations.Add(newReservation);
         await _context.SaveChangesAsync();
@@ -126,24 +132,27 @@ public class ReservationController(AppDbContext _context) : ControllerBase
             return CreatedAtAction(
                nameof(GetReservation),
                new { id = newReservation.Id },
-               createdReservation
+               new ResponseSchema<ReservationResponseDTO>
+               {
+                   Message = "Reservation created successfully.",
+                   Success = true,
+                   Data = createdReservation
+               }
            );
         }
 
-        return BadRequest("Wrong object structure.");
+        throw new BadRequestException("Wrong object structure.");
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateReservation(Guid id, ReservationDTO dto)
     {
         if (id != dto.Id)
-            return BadRequest("ID mismatch.");
+            throw new BadRequestException("ID mismatch.");
 
         var reservation = await _context.Reservations
-            .FirstOrDefaultAsync(r => r.Id == id);
-
-        if (reservation == null)
-            return NotFound($"Reservation with Id {id} not found.");
+            .FirstOrDefaultAsync(r => r.Id == id)
+            ?? throw new NotFoundException($"Reservation with Id {id} not found.");
 
         reservation.Start = dto.Start;
         reservation.End = dto.End;
@@ -152,27 +161,27 @@ public class ReservationController(AppDbContext _context) : ControllerBase
 
         // Check for overlapping reservations for the same room
         if (OverlappingReservationsInRoom(_context, reservation))
-            return BadRequest("The reservation overlaps with an existing reservation for the same room.");
+            throw new BadRequestException("The reservation overlaps with an existing reservation for the same room.");
 
         // Check for maximum duration
         if (ReservationExceedsMaxDuration(reservation))
-            return BadRequest("The reservation exceeds the maximum allowed duration of 2 hours.");
+            throw new BadRequestException("The reservation exceeds the maximum allowed duration of 2 hours.");
 
         // Check if reservation is too early
         if (TooEarlyToMakeReservation(reservation))
-            return BadRequest("Cannot update a reservation that starts in more than a week from now.");
+            throw new BadRequestException("Cannot update a reservation that starts in more than a week from now.");
 
         // Check if reservation is past
         if (IsReservationPast(reservation))
-            return BadRequest("Cannot update a reservation that has already started.");
+            throw new BadRequestException("Cannot update a reservation that has already started.");
 
         // Check if maximum reservations per user exceeded
         if (MaximumReservationsPerUserExceeded(_context, reservation))
-            return BadRequest("User cannot have more than 3 active reservations on the same day.");
+            throw new BadRequestException("User cannot have more than 3 active reservations on the same day.");
 
         // Check if user already has a reservation that overlaps with the updated reservation
         if (UserAlreadyHasReservation(_context, reservation))
-            return BadRequest("User already has a reservation that overlaps with the updated reservation.");
+            throw new BadRequestException("User already has a reservation that overlaps with the updated reservation.");
 
         await _context.SaveChangesAsync();
         return NoContent();
@@ -181,13 +190,11 @@ public class ReservationController(AppDbContext _context) : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteReservation(Guid id)
     {
-        var reservation = await _context.Reservations.FindAsync(id);
-
-        if (reservation == null)
-            return NotFound();
+        var reservation = await _context.Reservations.FindAsync(id)
+            ?? throw new NotFoundException($"Reservation with ID {id} not found.");
 
         if (TooLateToCancel(reservation))
-            return BadRequest("Cannot cancel a reservation less than 30 minutes before it starts.");
+            throw new BadRequestException("Cannot cancel a reservation less than 30 minutes before it starts.");
 
         _context.Reservations.Remove(reservation);
         await _context.SaveChangesAsync();

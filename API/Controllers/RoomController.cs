@@ -1,8 +1,11 @@
 using Data.Context;
 using Data.DTOs;
 using Data.Entities;
+using Data.Filtering;
+using Data.Response;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Core.Exceptions;
 
 namespace API.Controllers;
 
@@ -11,20 +14,35 @@ namespace API.Controllers;
 public class RoomController(AppDbContext _context) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<Room>>> GetRooms()
+    public async Task<ActionResult<ResponseSchema<IReadOnlyList<Room>>>> GetRooms([FromQuery] FilterParams filterParams)
     {
-        var rooms = await _context.Rooms
-             .Select(r => new RoomDTO
-             {
-                 Id = r.Id,
-                 Name = r.Name,
-                 Capacity = r.Capacity,
-                 Floor = r.Floor,
-                 Equipments = r.Equipments.Select(e => new EquipmentDTO { Id = e.Id, Name = e.Name }).ToList()
-             })
-             .ToListAsync();
+        if (!filterParams.Start.HasValue)
+            throw new BadRequestException("Start date is required.");
 
-        return Ok(rooms);
+        if (!filterParams.End.HasValue)
+            throw new BadRequestException("End date is required.");
+
+        if (filterParams.Start >= filterParams.End)
+            throw new BadRequestException("Start must be earlier than End.");
+
+        var query = await _context.Rooms
+            .Where(r => r.Reservations.All(res => res.End <= filterParams.Start || res.Start >= filterParams.End)) // Filter rooms that are available between the specified dates
+            .Select(r => new RoomDTO
+            {
+                Id = r.Id,
+                Name = r.Name,
+                Capacity = r.Capacity,
+                Floor = r.Floor,
+                Equipments = r.Equipments.Select(e => new EquipmentDTO { Id = e.Id, Name = e.Name }).ToList()
+            })
+            .ToListAsync();
+
+        return Ok(new ResponseSchema<List<RoomDTO>>
+        {
+            Message = $"Rooms between {filterParams.Start} and {filterParams.End} retrieved successfully.",
+            Success = true,
+            Data = query
+        });
     }
 
     [HttpGet("{id}")]
@@ -122,6 +140,29 @@ public class RoomController(AppDbContext _context) : ControllerBase
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    [HttpGet("betweenDates")]
+    public async Task<ActionResult<ResponseSchema<List<RoomDTO>>>> GetRoomsBetweenDates(DateTime start, DateTime end)
+    {
+        var rooms = await _context.Rooms
+            .Where(r => r.Reservations.All(res => res.End <= start || res.Start >= end))
+            .Select(r => new RoomDTO
+            {
+                Id = r.Id,
+                Name = r.Name,
+                Capacity = r.Capacity,
+                Floor = r.Floor,
+                Equipments = r.Equipments.Select(e => new EquipmentDTO { Id = e.Id, Name = e.Name }).ToList()
+            })
+            .ToListAsync();
+
+        return Ok(new ResponseSchema<List<RoomDTO>>
+        {
+            Message = "Rooms retrieved successfully.",
+            Success = true,
+            Data = rooms
+        });
     }
 
     private async Task<bool> RoomExists(Guid id)
