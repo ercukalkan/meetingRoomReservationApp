@@ -23,12 +23,12 @@ Toplantı odası rezervasyon uygulaması:
 
 ## Çalıştırma adımları
 
-1. **Klon:**
-   git clone https://github.com/kullanici/meetingRoomReservationApp.git
-   cd meetingRoomReservationApp
+1. **Reponun local ortama kopyalanması:**
+   - git clone https://github.com/kullanici/meetingRoomReservationApp.git
+   - cd meetingRoomReservationApp
 
-2. **Bağımlılıkların yüklenmesi:**
-   dotnet restore
+2. **.NET Bağımlılıkların yüklenmesi:**
+   - dotnet restore
 
 3. **Veritabanı bağlantı kontrolün:**
    - Kendi ortamınızda .NET Core User Secrets oluşturup ConnectionStrings göre güncelleyin.
@@ -41,14 +41,14 @@ Toplantı odası rezervasyon uygulaması:
    - MSSQL_SA_PASSWORD ve ACCEPT_EULA değişkenlerini oluşturup kendi değerlerinizi atayın.
 
 5. **Docker ile MSSQL motorunun çalıştırılması:**
-   docker-compose up --build
+   - docker-compose up --build
 
 6. **Veritabanı migration uygulaması ve veritabanı güncellemesi**
-   dotnet ef database update
+   - dotnet ef database update
 
 7. **Uygulamanın başlatılması:**
    - Proje dizininde:
-     dotnet run --project MeetingRoomReservationApp
+     - dotnet run --project .\API\
 
 8. **Uygulamaya erişim:**
    - Tarayıcıda `http://localhost:5021` adresini ziyaret edin (port yapılandırmasına göre değişebilir).
@@ -60,24 +60,24 @@ Toplantı odası rezervasyon uygulaması:
 1. **Çakışan rezervasyonlar**
    - Aynı oda için aynı saatte birden fazla rezervasyon yapılamaz.
      - Yeni rezervasyon oluşturulurken mevcut rezervasyonlarla saat çakışmaları kontrol edildi.
-     - Çakışma durumunda **_The reservation overlaps with an existing reservation for the same room._** hatası fırlatılıyor.
+     - Çakışma durumunda **_"The reservation overlaps with an existing reservation for the same room."_** hatası fırlatılıyor.
    - Authorization mekanizması eklenerek yetki kapasitesine göre mevcut rezervasyon silinip yenisinin oluşturulması mümkün kılınabilir.
 
 2. **Rezervasyon süreleri**
    - Sadece maksimum rezervasyon süresi 2 saat olacak şekilde eklendi.
-     - Maksimum süreyi aşan rezervasyonlar eklenmeye veya güncellenmeye çalışılırken **_The reservation exceeds the maximum allowed duration of 2 hours._** hatası fırlatılıyor.
-   - Geçmiş tarihli rezervasyon yapılamıyor. **_Cannot create a reservation from the past._** hatası fırlatılıyor.
-   - 1 haftadan sonraki günler için rezervasyon yapılamıyor. **_Cannot create a reservation that starts in more than a week from now._** hatası fırlatılıyor.
+     - Maksimum süreyi aşan rezervasyonlar eklenmeye veya güncellenmeye çalışılırken **_"The reservation exceeds the maximum allowed duration of 2 hours."_** hatası fırlatılıyor.
+   - Geçmiş tarihli rezervasyon yapılamıyor. **_"Cannot create a reservation from the past."_** hatası fırlatılıyor.
+   - 1 haftadan sonraki günler için rezervasyon yapılamıyor. **_"Cannot create a reservation that starts in more than a week from now."_** hatası fırlatılıyor.
 
 3. **İptal politikası**
-   - Başlangıç saatine 30 dakikadan az kalan ve başlamış durumda olan rezervasyonlar iptal edilemiyor. **_Cannot cancel a reservation less than 30 minutes before it starts._** hatası fırlatılıyor.
+   - Başlangıç saatine 30 dakikadan az kalan ve başlamış durumda olan rezervasyonlar iptal edilemiyor. **_"Cannot cancel a reservation less than 30 minutes before it starts."_** hatası fırlatılıyor.
 
 4. **Kapasite kontrolü**
    - Kapasite kontrolü eklenmedi.
 
 5. **Kullanıcı kısıtlamaları**
-   - Bir kullanıcı için aynı günde en fazla 3 rezervasyon sınırı eklendi. Aşıldığı durumda **_User cannot have more than 3 active reservations on the same day._** hatası fırlatılıyor.
-   - Aynı kullanıcı için çakışan saatlerde farklı odalara rezervasyon yapılması engellendi. **_User already has a reservation that overlaps with the new reservation._** hatası fırlatılıyor.
+   - Bir kullanıcı için aynı günde en fazla 3 rezervasyon sınırı eklendi. Aşıldığı durumda **_"User cannot have more than 3 active reservations on the same day."_** hatası fırlatılıyor.
+   - Aynı kullanıcı için çakışan saatlerde farklı odalara rezervasyon yapılması engellendi. **_"User already has a reservation that overlaps with the new reservation."_** hatası fırlatılıyor.
 
 - Bütün bu iş kuralları Specification Pattern kullanılarak hard-coded olmaktan çıkarılabilir. Ancak bu aşamada Specification Pattern uygulanmadı.
 
