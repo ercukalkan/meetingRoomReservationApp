@@ -28,10 +28,18 @@ public class ExceptionHandlerMiddleware(RequestDelegate next, ILogger<ExceptionH
             logger.LogError(error, "An error occurred while processing the request.");
             context.Response.StatusCode = response.StatusCode;
 
-            var result = new
+            var errors = error switch
             {
-                message = error?.Message,
-                statusCode = response.StatusCode
+                NotFoundException => [error.Message],
+                BadRequestException => [error.Message],
+                _ => new List<string> { "An unexpected error occurred." }
+            };
+
+            var result = new ResponseSchema
+            {
+                Message = "An error occurred while processing the request.",
+                Success = false,
+                Errors = errors
             };
 
             await context.Response.WriteAsync(JsonSerializer.Serialize(result));

@@ -2,6 +2,10 @@ using Microsoft.AspNetCore.Mvc;
 using Data.Context;
 using Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using Core.Exceptions;
+using Data.DTOs;
+using System.ComponentModel.DataAnnotations;
+using Data.Response;
 
 namespace API.Controllers;
 
@@ -10,41 +14,99 @@ namespace API.Controllers;
 public class EquipmentController(AppDbContext _context) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<Equipment>>> GetEquipments()
+    public async Task<ActionResult<ResponseSchema<List<EquipmentDTO>>>> GetEquipments()
     {
-        var equipments = await _context.Equipments.ToListAsync();
-        return Ok(equipments);
+        var equipments = await _context.Equipments
+            .Select(e => new EquipmentDTO { Id = e.Id, Name = e.Name })
+            .ToListAsync();
+        return Ok(new ResponseSchema<List<EquipmentDTO>>
+        {
+            Message = "Equipments retrieved successfully.",
+            Success = true,
+            Data = equipments
+        });
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<Equipment>> GetEquipment(Guid id)
+    public async Task<ActionResult<ResponseSchema<EquipmentDTO>>> GetEquipment(Guid id)
     {
-        var equipment = await _context.Equipments.FindAsync(id);
+        var equipment = await _context.Equipments.FindAsync(id)
+            ?? throw new NotFoundException($"Equipment with ID {id} not found.");
 
-        if (equipment == null)
-            return NotFound();
+        var equipmentDto = new EquipmentDTO
+        {
+            Id = equipment.Id,
+            Name = equipment.Name
+        };
 
-        return Ok(equipment);
+        return Ok(new ResponseSchema<EquipmentDTO>
+        {
+            Message = "Equipment retrieved successfully.",
+            Success = true,
+            Data = equipmentDto
+        });
     }
 
     [HttpPost]
-    public async Task<ActionResult<Equipment>> CreateEquipment(Equipment equipment)
+    public async Task<ActionResult<ResponseSchema<EquipmentDTO>>> CreateEquipment(EquipmentDTO dto)
     {
+        if (dto == null)
+            throw new BadRequestException("Equipment data is required.");
+
+        var equipment = new Equipment
+        {
+            Name = dto.Name!
+        };
+
+        var validationResults = new List<ValidationResult>();
+        var validationContext = new ValidationContext(equipment);
+
+        if (!Validator.TryValidateObject(equipment, validationContext, validationResults, true))
+        {
+            var errors = validationResults.Select(vr => vr.ErrorMessage ?? "Validation error").ToList();
+            throw new BadRequestException(string.Join("; ", errors));
+        }
+
         _context.Equipments.Add(equipment);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetEquipment), new { id = equipment.Id }, equipment);
+        var equipmentDto = new EquipmentDTO
+        {
+            Id = equipment.Id,
+            Name = equipment.Name
+        };
+
+        return CreatedAtAction(nameof(GetEquipment), new { id = equipment.Id }, new ResponseSchema<EquipmentDTO>
+        {
+            Message = "Equipment created successfully.",
+            Success = true,
+            Data = equipmentDto
+        });
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateEquipment(Guid id, Equipment updatedEquipment)
+    public async Task<IActionResult> UpdateEquipment(Guid id, EquipmentDTO dto)
     {
-        if (id != updatedEquipment.Id)
-            return BadRequest();
+        if (dto == null)
+            throw new BadRequestException("Equipment data is required.");
 
-        var equipment = await _context.Equipments.FindAsync(id);
-        if (equipment == null)
-            return NotFound();
+        var updatedEquipment = await _context.Equipments.FindAsync(id)
+            ?? throw new NotFoundException($"Equipment with ID {id} not found.");
+
+        var validationResults = new List<ValidationResult>();
+        var validationContext = new ValidationContext(updatedEquipment);
+
+        if (!Validator.TryValidateObject(updatedEquipment, validationContext, validationResults, true))
+        {
+            var errors = validationResults.Select(vr => vr.ErrorMessage ?? "Validation error").ToList();
+            throw new BadRequestException(string.Join("; ", errors));
+        }
+
+        if (id != updatedEquipment.Id)
+            throw new BadRequestException("ID in URL does not match ID in body.");
+
+        var equipment = await _context.Equipments.FindAsync(id)
+            ?? throw new NotFoundException($"Equipment with ID {id} not found.");
 
         equipment.Name = updatedEquipment.Name;
 
@@ -55,10 +117,8 @@ public class EquipmentController(AppDbContext _context) : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteEquipment(Guid id)
     {
-        var equipment = await _context.Equipments.FindAsync(id);
-
-        if (equipment == null)
-            return NotFound();
+        var equipment = await _context.Equipments.FindAsync(id)
+            ?? throw new NotFoundException($"Equipment with ID {id} not found.");
 
         _context.Equipments.Remove(equipment);
         await _context.SaveChangesAsync();
