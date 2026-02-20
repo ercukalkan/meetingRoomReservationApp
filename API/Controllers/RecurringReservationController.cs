@@ -126,6 +126,7 @@ public class RecurringReservationController(AppDbContext _context) : ControllerB
         if (recurringReservation == null)
             return NotFound();
 
+        _context.Reservations.RemoveRange(ClearCorrespondingReservations(id));
         _context.RecurringReservations.Remove(recurringReservation);
         await _context.SaveChangesAsync();
 
@@ -133,7 +134,7 @@ public class RecurringReservationController(AppDbContext _context) : ControllerB
     }
 
     // Returns a list to create Reservation entities based on the created Recurring Reservation entity
-    private List<Reservation> CreateCorrespondingReservations(RecurringReservation recurringReservation)
+    private static List<Reservation> CreateCorrespondingReservations(RecurringReservation recurringReservation)
     {
         var list = new List<Reservation>(recurringReservation.NumberOfWeeks);
 
@@ -155,6 +156,8 @@ public class RecurringReservationController(AppDbContext _context) : ControllerB
     // Clears existing Reservation entities created based on Recurring Reservation before update
     private List<Reservation> ClearCorrespondingReservations(Guid id)
     {
-        return _context.Reservations.Where(r => r.RecurringReservationId == id).ToList();
+        var list = _context.Reservations.Where(r => r.RecurringReservationId == id).ToList();
+
+        return list;
     }
 }
