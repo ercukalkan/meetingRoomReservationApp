@@ -1,6 +1,6 @@
 using Data.Context;
 using Microsoft.EntityFrameworkCore;
-using Data.Context.DbSeeder;
+using Data.DbSeeder;
 
 var builder = WebApplication.CreateBuilder(args);
 
